@@ -70,8 +70,7 @@ print(tige.cld)
 # Graphique masse des tiges ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #tableau résumé avec lettres et 3e quartile
 Tk.T <- group_by(croissance, site) %>%
-  summarise(mean=mean(masse.tige), quant = quantile(masse.tige, probs = 0.75)) %>%
-  arrange(desc(mean))
+  summarise(mean=mean(masse.tige), quant = quantile(masse.tige, probs = 0.75))
 
 # extracting the compact letter display and adding to the Tk table
 Tk.T$cld <- tige.cld$mcletters$Letters
@@ -84,7 +83,8 @@ ggplot(croissance, aes(x=site, y=masse.tige)) +
   xlab("Site") +
   ylab("Masse sèche des tiges (g)") +
   geom_label(data = Tk.T, aes(x = site, y = quant, label = cld), 
-             size = 3, nudge_x=0.15, nudge_y =0.007)
+             size = 3, nudge_x=0.15, nudge_y =0.007)+
+  theme_minimal()
 
 
 #Longueur des racines ~ sites ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -690,6 +690,8 @@ sqrt(mean((pcr_pred.pls - y_test.pls.tige)^2))
 library(vegan)
 library(FactoMineR)
 library(ggplot2)
+library(ggfortify)
+library(stats)
 
 #importer les données 
 setwd("~/Documents/Maîtrise/Données Axe 1")
@@ -741,7 +743,10 @@ ggplot(data=myc.site, aes(x=PC1, y=PC2, colour = Sites))+
 
 sol.pca <- rda(lonicera.pc, scale=TRUE)
 summary(sol.pca, axes=0)
-biplot(sol.pca, scaling = 1)
+biplot(sol.pca, scaling = 1,
+       xlab = "Premier axe en composante principal (35.54 %)",
+       ylab = "Deuxième axe en composante principal (20.72 %)",)
+
 biplot(sol.pca, scaling = 2)
 
 #plus facile à visualiser
@@ -759,11 +764,26 @@ ordiellipse(sol.site, groups = sol.site[,3], col=Sites.ellipse, label=TRUE)
 sol.site <- as.data.frame(sol.site)
 sol.site$Sites <- as.factor(sol.site$Sites)
 
+pca_res <- prcomp(lonicera.pc, scale. = TRUE)
+
+autoplot(pca_res, data = lonicera, color = 'site',
+         frame = TRUE, frame.type = 'norm', frame.alpha = 0,
+         loadings = TRUE, loadings.color = 'gray60',
+         loadings.label = TRUE, loadings.label.size = 3, loadings.label.color = 'black', loadings.label.vjust = 0.01)+
+  scale_color_brewer(palette="Spectral")
+
+
+
+xlab("Site")+
+  ylab("Colonisation moyenne (%)")+
 ggplot(data=sol.site, aes(x=PC1, y=PC2, colour = Sites))+
   geom_point()+
   xlab("Premier axe en compostantes principales")+
   ylab("Deuxième axe en compostantes principales")+
   stat_ellipse(type = "t", lwd = 0.4, level = 0.75)
+
+#biplot avec ggplot2
+ggord(sol.site)
 
 #Performance des plants ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #PAS utilisé ecm
@@ -897,11 +917,12 @@ summary(test.glm3)
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Histogramme ====
+# Histogrammes de biomasse ====
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 library(ggplot2)
 library(RColorBrewer)
+library(viridis)
 
 #importer les données 
 setwd("~/Documents/Maîtrise/Données Axe 1")
@@ -914,23 +935,277 @@ for(t in 1:50)
 ecart <- ecart[-40]
 cbind(lonicera, ecart)
                      
-#ggplot : avec les moyennes
-ggplot(lonicera, aes(x = site, y = masse.tige, color=site))+
-  geom_col(position=position_dodge2(width = 0.9), show.legend = FALSE)+
-  geom_errorbar(aes(ymin=masse.tige-ecart, ymax=masse.tige+ecart), width=0.4, position =  position_dodge2(width = 0.9), show.legend = FALSE)+
+#ggplot : version avec les barres d'erreur standard
+ggbars <- ggplot(lonicera, aes(x = site, y = masse.tige))+
+  geom_col(position=position_dodge2(width = 0.9), color="grey20", linewidth=.3, show.legend = FALSE, width=0.9)+
+  geom_errorbar(aes(ymin=masse.tige-ecart, ymax=masse.tige+ecart), position =  position_dodge2(width = 0.9), show.legend = FALSE, width = 0.9)+
   xlab("Sites")+
-  ylab("Masse des tiges (g)")
+  ylab("Biomasse aérienne (g)")
 
-# à faire : barres d'erreur et changer les couleurs
+#ggplot : version avec les barres d'erreur en lignes
+col=as.numeric(lonicera$site)
+cols=c("#972619","#601997","#195497","#227911","#FFD31E")
+for(i in 1:length(col)){
+  for(j in 1:5){if(col[i]==j){col[i]=cols[j]}}}
 
-ggplot(croissance, aes(x = inoculum, y = masse.tige, color=site))+
-  geom_col(position="dodge", show.legend = FALSE)
-
-ggplot(lonicera, aes(x = site, y = masse.tige, fill=inoculum))+
-  geom_bar(position="dodge", stat = "identity", show.legend = FALSE)+
-  geom_errorbar(aes(ymin=masse.tige-ecart, ymax=masse.tige+ecart), width=0.4, position =  position_dodge2(width = 0.9), show.legend = FALSE)+
+ggplot(lonicera, aes(x = site, y = masse.tige))+
+  geom_col(position=position_dodge2(width = 0.9), color="grey45", linewidth=.3,fill=col, show.legend = FALSE)+
+  geom_linerange(aes(ymin=masse.tige, ymax=masse.tige+ecart), color="grey20", position =  position_dodge2(width = 0.9), show.legend = FALSE)+
   xlab("Sites")+
-  ylab("Masse des tiges (g)")
+  ylab("Masse des tiges (g)")+
+  theme_minimal()
+
+#couleur viridis
+ggplot(lonicera, aes(x = site, y = masse.tige))+
+  geom_col(aes(fill = site), linewidth=.2, color="grey40", position=position_dodge2(width = 0.9), show.legend = FALSE, width=0.9)+
+  geom_linerange(aes(ymin=masse.tige, ymax=masse.tige+ecart), position =  position_dodge2(width = 0.9), show.legend = FALSE)+
+  scale_color_viridis(discrete = TRUE)+
+  scale_fill_viridis(discrete = TRUE, option = "C") +
+  theme_minimal() +
+  xlab("Sites")+
+  ylab("Biomasse aérienne (g)")
+
+#couleur brews
+ggplot(lonicera, aes(x = site, y = masse.tige, fill = site))+
+  geom_col(position=position_dodge2(width = 0.9), linewidth=.2, color="grey40", show.legend = FALSE, width=0.9)+
+  geom_linerange(aes(ymin=masse.tige, ymax=masse.tige+ecart), position =  position_dodge2(width = 0.9), show.legend = FALSE)+
+  xlab("Sites")+
+  ylab("Biomasse aérienne (g)")+
+  scale_fill_brewer(palette="Spectral")+
+  theme_minimal()
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Histogrammes de colonisation ====
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+library(ggplot2)
+library(wesanderson)
+library(hrbrthemes)
+library(RColorBrewer)
+library(ggpubr)
+
+
+#importer les données 
+setwd("~/Documents/Maîtrise/Données Axe 1")
+load("/Users/coralie/Documents/Maîtrise/Données Axe 1/Lonicera.Coralie.RData")
+
+
+#isoler les données de colonisation 
+colo <- lonicera[, c(1, 6:10)]
+
+
+#créer le fichier avec moyennes et erreur
+#arbuscules
+colo.arb <- data.frame (Site  = as.factor(c(1, 2, 3, 4, 5)),
+                        Colonisation = c(mean(lonicera$arb[lonicera$site==1]), mean(lonicera$arb[lonicera$site==2]), mean(lonicera$arb[lonicera$site==3]), mean(lonicera$arb[lonicera$site==4]), mean(lonicera$arb[lonicera$site==5])),
+                        Erreur = c(sd(lonicera$arb[lonicera$site==1]), sd(lonicera$arb[lonicera$site==2]), sd(lonicera$arb[lonicera$site==3]), sd(lonicera$arb[lonicera$site==4]), sd(lonicera$arb[lonicera$site==5])),
+                        Structure = c("Arbuscules", "Arbuscules", "Arbuscules", "Arbuscules", "Arbuscules"))
+#coils
+colo.coils <- data.frame (Site  = as.factor(c(1, 2, 3, 4, 5)),
+                        Colonisation = c(mean(lonicera$coils[lonicera$site==1]), mean(lonicera$coils[lonicera$site==2]), mean(lonicera$coils[lonicera$site==3]), mean(lonicera$coils[lonicera$site==4]), mean(lonicera$coils[lonicera$site==5])),
+                        Erreur = c(sd(lonicera$coils[lonicera$site==1]), sd(lonicera$coils[lonicera$site==2]), sd(lonicera$coils[lonicera$site==3]), sd(lonicera$coils[lonicera$site==4]), sd(lonicera$coils[lonicera$site==5])),
+                        Structure = c("Paris", "Paris", "Paris", "Paris", "Paris"))
+#Vésicules
+colo.ves <- data.frame (Site  = as.factor(c(1, 2, 3, 4, 5)),
+                        Colonisation = c(mean(lonicera$ves[lonicera$site==1]), mean(lonicera$ves[lonicera$site==2]), mean(lonicera$ves[lonicera$site==3]), mean(lonicera$ves[lonicera$site==4]), mean(lonicera$ves[lonicera$site==5])),
+                        Erreur = c(sd(lonicera$ves[lonicera$site==1]), sd(lonicera$ves[lonicera$site==2]), sd(lonicera$ves[lonicera$site==3]), sd(lonicera$ves[lonicera$site==4]), sd(lonicera$ves[lonicera$site==5])),
+                        Structure = c("Vésicules", "Vésicules", "Vésicules", "Vésicules", "Vésicules"))
+#Structure non-mycorhizienne
+colo.nonmyc <- data.frame (Site  = as.factor(c(1, 2, 3, 4, 5)),
+                        Colonisation = c(mean(lonicera$nonmyc[lonicera$site==1]), mean(lonicera$nonmyc[lonicera$site==2]), mean(lonicera$nonmyc[lonicera$site==3]), mean(lonicera$nonmyc[lonicera$site==4]), mean(lonicera$nonmyc[lonicera$site==5])),
+                        Erreur = c(sd(lonicera$nonmyc[lonicera$site==1]), sd(lonicera$nonmyc[lonicera$site==2]), sd(lonicera$nonmyc[lonicera$site==3]), sd(lonicera$nonmyc[lonicera$site==4]), sd(lonicera$nonmyc[lonicera$site==5])),
+                        Structure = c("Non-mycorhiziennes", "Non-mycorhiziennes", "Non-mycorhiziennes", "Non-mycorhiziennes", "Non-mycorhiziennes"))
+#Dark Septae Endophytes
+colo.dse <- data.frame (Site  = as.factor(c(1, 2, 3, 4, 5)),
+                        Colonisation = c(mean(lonicera$dse[lonicera$site==1]), mean(lonicera$dse[lonicera$site==2]), mean(lonicera$dse[lonicera$site==3]), mean(lonicera$dse[lonicera$site==4]), mean(lonicera$dse[lonicera$site==5])),
+                        Erreur = c(sd(lonicera$dse[lonicera$site==1]), sd(lonicera$dse[lonicera$site==2]), sd(lonicera$dse[lonicera$site==3]), sd(lonicera$dse[lonicera$site==4]), sd(lonicera$dse[lonicera$site==5])),
+                        Structure = c("Dark septae endophytes", "Dark septae endophytes", "Dark septae endophytes", "Dark septae endophytes", "Dark septae endophytes"))
+
+## Graphiques individuels ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#graphique - arbuscules
+plot.arb <- ggplot(colo.arb, aes(x = Site, y = Colonisation, fill = Site))+
+  geom_col(position=position_dodge(), show.legend = FALSE)+
+  geom_linerange(aes(ymin=Colonisation, ymax=Colonisation+Erreur), size = 0.4, color = "gray50", position =  position_dodge(width = 0.3), show.legend = FALSE)+
+  geom_errorbar(aes(ymin=Colonisation+Erreur, ymax=Colonisation+Erreur), size = 0.4, width = 0.3, color = "gray50", position =  position_dodge(), show.legend = FALSE)+
+  xlab("Site")+
+  ylab("Colonisation moyenne (%)")+
+  scale_fill_brewer(palette="Spectral")+
+  theme_minimal()
+
+#graphique - coils
+plot.coils <- ggplot(colo.coils, aes(x = Site, y = Colonisation, fill = Site))+
+  geom_col(position=position_dodge(), show.legend = FALSE)+
+  geom_linerange(aes(ymin=Colonisation, ymax=Colonisation+Erreur), size = 0.4, color = "gray50", position =  position_dodge(width = 0.3), show.legend = FALSE)+
+  geom_errorbar(aes(ymin=Colonisation+Erreur, ymax=Colonisation+Erreur), size = 0.4, width = 0.3, color = "gray50", position =  position_dodge(), show.legend = FALSE)+
+  xlab("Site")+
+  ylab("Colonisation moyenne (%)")+
+  scale_fill_brewer(palette="Spectral")+
+  theme_minimal()
+
+#graphique - vésicules
+plot.ves <- ggplot(colo.ves, aes(x = Site, y = Colonisation, fill = Site))+
+  geom_col(position=position_dodge(), show.legend = FALSE)+
+  geom_linerange(aes(ymin=Colonisation, ymax=Colonisation+Erreur), size = 0.4, color = "gray50", position =  position_dodge(width = 0.3), show.legend = FALSE)+
+  geom_errorbar(aes(ymin=Colonisation+Erreur, ymax=Colonisation+Erreur), size = 0.4, width = 0.3, color = "gray50", position =  position_dodge(), show.legend = FALSE)+
+  xlab("Site")+
+  ylab("Colonisation moyenne (%)")+
+  scale_fill_brewer(palette="Spectral")+
+  theme_minimal()
+
+#graphique - non-mycorhiziennes
+plot.nonmyc <- ggplot(colo.nonmyc, aes(x = Site, y = Colonisation, fill = Site))+
+  geom_col(position=position_dodge(), show.legend = FALSE)+
+  geom_linerange(aes(ymin=Colonisation, ymax=Colonisation+Erreur), size = 0.4, color = "gray50", position =  position_dodge(width = 0.3), show.legend = FALSE)+
+  geom_errorbar(aes(ymin=Colonisation+Erreur, ymax=Colonisation+Erreur), size = 0.4, width = 0.3, color = "gray50", position =  position_dodge(), show.legend = FALSE)+
+  xlab("Site")+
+  ylab("Colonisation moyenne (%)")+
+  scale_fill_brewer(palette="Spectral")+
+  theme_minimal()
+
+#graphique - dse
+plot.dse <- ggplot(colo.dse, aes(x = Site, y = Colonisation, fill = Site))+
+  geom_col(position=position_dodge())+
+  geom_linerange(aes(ymin=Colonisation, ymax=Colonisation+Erreur), size = 0.4, color = "gray50", position =  position_dodge(width = 0.3), show.legend = FALSE)+
+  geom_errorbar(aes(ymin=Colonisation+Erreur, ymax=Colonisation+Erreur), size = 0.4, width = 0.3, color = "gray50", position =  position_dodge(), show.legend = FALSE)+
+  xlab("Site")+
+  ylab("Colonisation moyenne (%)")+
+  scale_fill_brewer(palette="Spectral")+
+  theme_minimal()
+
+## Graphiques rassemblés ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#rassembler les données
+colo.complet <- rbind(colo.arb, colo.coils, colo.dse, colo.nonmyc, colo.ves)
+
+#changer l'ordre
+colo.complet$Structure <- factor(colo.complet$Structure, levels= c("Arbuscules", "Paris", "Vésicules", "Dark septae endophytes", "Non-mycorhiziennes"))
+
+p2 <- ggplot(colo.complet, aes(x = Site, y = Colonisation, fill = Site)) + 
+  geom_col(position=position_dodge())+
+  geom_linerange(aes(ymin=Colonisation, ymax=Colonisation+Erreur), size = 0.4, color = "gray50", position =  position_dodge(width = 0.3), show.legend = FALSE)+
+  geom_errorbar(aes(ymin=Colonisation+Erreur, ymax=Colonisation+Erreur), size = 0.4, width = 0.3, color = "gray50", position =  position_dodge(), show.legend = FALSE)+
+  xlab("Site")+
+  ylab("Colonisation moyenne des racines (%)")+
+  scale_fill_brewer(palette="Spectral")+
+  theme_minimal()+
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(), panel.grid.major.x = element_blank())+
+  facet_wrap(~Structure, scale="free", ncol=3)
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Corrélation biomasse / colonisation ====
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+library(ggplot2)
+library(ggpubr)
+
+
+#importer les données 
+setwd("~/Documents/Maîtrise/Données Axe 1")
+load("/Users/coralie/Documents/Maîtrise/Données Axe 1/Lonicera.Coralie.RData")
+
+#créer le fichier
+colo.biomasse <- data.frame(Site = c(lonicera$site, lonicera$site, lonicera$site, lonicera$site, lonicera$site),
+                            Biomasse = c(lonicera$masse.tige, lonicera$masse.tige, lonicera$masse.tige, lonicera$masse.tige, lonicera$masse.tige),
+                            Structure = rep(c("Arbuscules", "Paris", "Vésicules", "Dark septae endophytes", "Non-mycorhiziennes"),times=c(49, 49, 49, 49, 49)),
+                            Colonisation = c(lonicera$arb, lonicera$coils, lonicera$ves, lonicera$dse, lonicera$nonmyc))
+
+
+#graphique
+ggplot(colo.biomasse, aes(x = Biomasse, y = Colonisation)) + 
+  geom_point()+
+  geom_smooth(method='lm', se = FALSE, color='turquoise4', size = 0.5)+ 
+  xlab("Biomasse (g)")+
+  ylab("Colonisation des racines (%)")+
+  theme_minimal()+
+  facet_wrap(~Structure, scale="free", ncol=3)
+
+#  scale_fill_brewer(palette="Spectral")+
+#    theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(), panel.grid.major.x = element_blank())+
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Histogrammes de propriétés de sols ====
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+library(ggplot2)
+
+#importer les données 
+setwd("~/Documents/Maîtrise/Données Axe 1")
+load("/Users/coralie/Documents/Maîtrise/Données Axe 1/Lonicera.Coralie.RData")
+
+#créer les barres d'erreur
+ecart <- NULL
+for(t in 1:5)
+{ecart = append(ecart, sd(lonicera$pH[lonicera$site == t]))}
+for(t in 1:5)
+{ecart = append(ecart, sd(lonicera$ammonium[lonicera$site == t]))}
+for(t in 1:5)
+{ecart = append(ecart, sd(lonicera$nitrate[lonicera$site == t]))}
+for(t in 1:5)
+{ecart = append(ecart, sd(lonicera$phosphore[lonicera$site == t]))}
+for(t in 1:5)
+{ecart = append(ecart, sd(lonicera$wsa[lonicera$site == t]))}
+for(t in 1:5)
+{ecart = append(ecart, sd(lonicera$mo[lonicera$site == t]))}
+
+#moyennes
+valeur <- NULL
+for(t in 1:5)
+{valeur = append(valeur, mean(lonicera$pH[lonicera$site == t]))}
+for(t in 1:5)
+{valeur = append(valeur, mean(lonicera$ammonium[lonicera$site == t]))}
+for(t in 1:5)
+{valeur = append(valeur, mean(lonicera$nitrate[lonicera$site == t]))}
+for(t in 1:5)
+{valeur = append(valeur, mean(lonicera$phosphore[lonicera$site == t]))}
+for(t in 1:5)
+{valeur = append(valeur, mean(lonicera$wsa[lonicera$site == t]))}
+for(t in 1:5)
+{valeur = append(valeur, mean(lonicera$mo[lonicera$site == t]))}
+
+
+#créer le fichier
+sol.barplot <- data.frame(Site = rep(1:5,times = 6),
+                         Propriété = rep(c("pH", "Ammonium", "Nitrate", "Phosphore", "Aggrégats stables", "Matière organique"), times = c(5, 5, 5, 5, 5, 5)),
+                         Valeur = valeur,
+                         Erreur = ecart)
+sol.barplot$Site = as.factor(sol.barplot$Site)
+sol.barplot$Propriété = as.factor(sol.barplot$Propriété)
+sol.barplot$Valeur = as.numeric(sol.barplot$Valeur)
+sol.barplot$Erreur = as.numeric(sol.barplot$Erreur)
+
+#changer l'ordre et les labels
+sol.barplot$Propriété <- factor(sol.barplot$Propriété, levels= c("Ammonium", "Nitrate", "Phosphore", "Aggrégats stables", "pH", "Matière organique"))
+
+variable_names <- list(
+  "Ammonium" = "Ammonium (mg/Kg)" ,
+  "Nitrate" = "Nitrate (mg/Kg)",
+  "Phosphore" = "Phosphore (mg/Kg)",
+  "Aggrégats stables" = "Agrégats stables (u?)",
+  "pH" = "pH",
+  "Matière organique" = "Matière organique (%)"
+)
+
+variable_labeller <- function(variable,value){
+  return(variable_names[value])
+}
+
+#graphique
+ggplot(sol.barplot, aes(x = Site, y = Valeur, fill = Site))+
+  geom_col(position=position_dodge())+
+  geom_linerange(aes(ymin=Valeur, ymax=Valeur+Erreur), size = 0.4, color = "gray50", position =  position_dodge(width = 0.3), show.legend = FALSE)+
+  geom_errorbar(aes(ymin=Valeur+Erreur, ymax=Valeur+Erreur), size = 0.4, width = 0.3, color = "gray50", position =  position_dodge(), show.legend = FALSE)+
+  xlab("Site")+
+  ylab(element_blank())+
+  scale_fill_brewer(palette="Spectral")+
+  theme_minimal()+  
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(), panel.grid.major.x = element_blank())+
+  facet_wrap(~Propriété, scale="free", ncol=3, labeller=variable_labeller)
+#reste à mettre des ylab différent pour chaque
+#et à régler le problème des nitrates
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Section tests ====
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -985,3 +1260,81 @@ plot(venn,
      fontsize = 8,
      quantities = list(fontsize = 8))
 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+#anciens slatckes barplot
+
+#isoler les données de colonisation 
+colo <- lonicera[, c(1, 6:10)]
+
+#mettre les données dans le bon format pour un barplot
+colo2 <- NULL
+#ajouter arb
+for (i in 1:49) {
+  colo2 <- rbind(colo2, c(colo$site[i], "arb", colo$arb[i]))
+}
+#ajouter coils
+for (i in 1:49) {
+  colo2 <- rbind(colo2, c(colo$site[i], "coils", colo$coils[i]))
+}
+#ajouter ves
+for (i in 1:49) {
+  colo2 <- rbind(colo2, c(colo$site[i], "ves", colo$ves[i]))
+}
+#ajouter nonmyc
+for (i in 1:49) {
+  colo2 <- rbind(colo2, c(colo$site[i], "nonmyc", colo$nonmyc[i]))
+}
+#ajouter dse
+for (i in 1:49) {
+  colo2 <- rbind(colo2, c(colo$site[i], "dse", colo$dse[i]))
+}
+
+#ajouter des titres de colonnes
+colo2 <- as.data.frame(colo2)
+colnames(colo2) = c("Site", "Structure", "Proportion")
+colo2$Site <- as.factor(colo2$Site)
+colo2$Structure <- as.factor(colo2$Structure)
+colo2$Proportion <- as.numeric(colo2$Proportion)
+
+
+#graphique
+ggplot(data=colo2, aes(x = Site, y = Proportion))+
+  geom_col(aes(fill = Structure), position = "stack")+
+  ylab("")
+scale_fill_manual(values= wes_palette("Darjeeling1", n = 5)) +
+  theme_minimal()
+
+
+#scale_fill_manual(values=wes_palette(n=5, name="Darjeeling"))+
+
+
+#rassembler les graphiques
+figure1 <- ggarrange(A1, A2, A3,
+                     labels = c("A", "B", "C"))
+annotate_figure(figure1,
+                right = text_grob("Nombre d'itérations : 10", color = "blue", rot = 270),
+                bottom = text_grob("Abondance de trois espèces de passerins (nb d'individus) 
+                en fonction du temps (années), pour les températures printanières actuelles",
+                                   hjust = 1.1, x = 1, size = 12),
+)
+annotate_figure(figure1,
+                right = text_grob("Nombre d'itérations : 10", color = "blue", rot = 270),
+                bottom = text_grob("Abondance de trois espèces de passerins (nb d'individus) 
+                en fonction du temps (années), pour les températures printanières actuelles",
+                                   hjust = 1.1, x = 1, size = 12),
+)
+
+#test pca iris
+library(datasets)
+library(ggfortify)
+library(cluster)
+data(iris)
+
+df <- iris[1:4]
+pca_res <- prcomp(df, scale. = TRUE)
+
+autoplot(pca_res, data = df, color = 'Species')
+autoplot(pam(iris[-5], 3), frame = TRUE, frame.type = 'norm')

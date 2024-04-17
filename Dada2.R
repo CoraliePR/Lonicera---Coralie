@@ -725,8 +725,18 @@ saveRDS(new.champignons5, file = "Autre.RData")
 ## Elastic net #6 : masse des tiges sur abondances relatives =====
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+setwd("~/Documents/Maîtrise/Données Axe 1")
+load("/Users/coralie/Documents/Maîtrise/Données Axe 1/Lonicera.Coralie.RData")
+
 load("/Users/coralie/Documents/Maîtrise/Données Axe 1/Autre.Rdata")
 
+
+library(tidyverse)
+library(caret)
+library(glmnet)
+library(prospectr)
+library(vegan)
+library(cgwtools)
 
 rel=function(x){x/sum(x)}
 comm.rel=t(apply(comm,1,rel))
@@ -830,3 +840,52 @@ ggplot(new.champignons6, aes(x = ASV, y=Coefficient)) +
   geom_hline(yintercept = 0, col = "gray", size = 0.4, linetype="dashed")
 
 saveRDS(new.champignons5, file = "Autre.RData")
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+##modifier les fichiers lonicera et lonicera.comm =====
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#après avoir changé les nutriments 
+
+load("/Users/coralie/Documents/Maîtrise/Données Axe 1/Autre.Rdata")
+#retirer l'ancien fichier lonicera
+remove(lonicera)
+#lire le nouveau fichier lonicera
+lonicera <- read.table("Lonicera.txt", header=TRUE)
+lonicera$phosphore
+lonicera$site <- as.factor(lonicera$site)
+lonicera$inoculum <- as.factor(lonicera$inoculum)
+
+#enlever la rangée 40 et décaler les numéros de rangées subséquents
+rownames(lonicera) = c(1:39, 41:50)
+
+#changer le fichier lonicera.comm
+#vecteur contenant les numéros de rangés (pas les noms de rangées) à conserver
+numeros <- as.numeric(rownames(comm))
+numeros[26:32] = numeros[26:32]-1
+#changer
+lonicera.comm$ammonium <- lonicera$ammonium[numeros]
+lonicera.comm$nitrate <- lonicera$nitrate[numeros]
+lonicera.comm$phosphore <- lonicera$phosphore[numeros]
+
+#retirer les fichiers superflux et sauver
+remove(numeros)
+save.image("Lonicera.Coralie.RData")
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## Graphique de corrélation =====
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+library(caret)
+load("/Users/coralie/Documents/Maîtrise/Données Axe 1/Lonicera.Coralie.RData")
+load("/Users/coralie/Documents/Maîtrise/Données Axe 1/Autre.Rdata")
+
+lambda = model.net$bestTune$lambda
+
+predict(
+  model.net,
+  exact = TRUE,
+  s = lambda,
+  type = c("coefficients"))
+
+
